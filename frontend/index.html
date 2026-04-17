@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenWatch AI — Satellite Deforestation Detector</title>
+    <meta name="description" content="AI-powered satellite imagery analysis for detecting illegal logging and deforestation using deep learning computer vision." />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>" />
+</head>
+<body>
+    <!-- ====== Scan-line overlay ====== -->
+    <div class="scanline-overlay" aria-hidden="true"></div>
+
+    <!-- ====== Top Nav ====== -->
+    <nav id="top-nav" class="top-nav">
+        <div class="nav-brand">
+            <span class="nav-icon">🛰️</span>
+            <span class="nav-title">GreenWatch<span class="nav-accent">.AI</span></span>
+        </div>
+        <div class="nav-status">
+            <span id="system-status" class="status-badge offline">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting…</span>
+            </span>
+            <span id="demo-badge" class="demo-badge hidden">DEMO</span>
+        </div>
+    </nav>
+
+    <!-- ====== Hero ====== -->
+    <header id="hero" class="hero">
+        <div class="hero-content">
+            <p class="hero-eyebrow">Deep Learning · Computer Vision · TensorFlow CNN</p>
+            <h1 class="hero-title">
+                Satellite <span class="gradient-text">Deforestation</span> Detector
+            </h1>
+            <p class="hero-subtitle">
+                Upload satellite imagery and let our convolutional neural network analyze land coverage in real-time.
+                Classifies regions as <strong>Forest</strong> or <strong>Deforested / Barren</strong> with confidence scoring.
+            </p>
+            <div class="hero-actions">
+                <a href="#predict-section" class="btn btn-primary" id="hero-cta">
+                    <span class="btn-icon">⚡</span> Start Analysis
+                </a>
+                <a href="#architecture-section" class="btn btn-ghost" id="hero-arch-btn">
+                    <span class="btn-icon">🧠</span> View Model
+                </a>
+            </div>
+        </div>
+        <div class="hero-particles" aria-hidden="true" id="hero-particles"></div>
+    </header>
+
+    <!-- ====== Live Stats Bar ====== -->
+    <section id="stats-bar" class="stats-bar">
+        <div class="stat-card" id="stat-scans">
+            <div class="stat-icon">📡</div>
+            <div class="stat-body">
+                <span class="stat-value" data-target="0">0</span>
+                <span class="stat-label">Total Scans</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-forest">
+            <div class="stat-icon">🌲</div>
+            <div class="stat-body">
+                <span class="stat-value" data-target="0">0</span>
+                <span class="stat-label">Forest Detected</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-alerts">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-body">
+                <span class="stat-value" data-target="0">0</span>
+                <span class="stat-label">Deforestation Alerts</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-accuracy">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-body">
+                <span class="stat-value" data-target="0">0<span class="stat-unit">%</span></span>
+                <span class="stat-label">Model Accuracy</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-coverage">
+            <div class="stat-icon">🌍</div>
+            <div class="stat-body">
+                <span class="stat-value" data-target="0">0<span class="stat-unit"> km²</span></span>
+                <span class="stat-label">Area Monitored</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== Main Prediction Section ====== -->
+    <main>
+        <section id="predict-section" class="section predict-section">
+            <div class="section-header">
+                <h2 class="section-title">🔬 Image Analysis</h2>
+                <p class="section-subtitle">Upload a satellite photo or test with a random sample from the dataset</p>
+            </div>
+
+            <div class="predict-grid">
+                <!-- Left: Upload / Input -->
+                <div class="predict-input-panel glass-card">
+                    <div class="panel-tabs">
+                        <button class="tab active" id="tab-upload" data-tab="upload">
+                            📁 Upload Image
+                        </button>
+                        <button class="tab" id="tab-random" data-tab="random">
+                            🎲 Random Sample
+                        </button>
+                        <button class="tab" id="tab-map" data-tab="map">
+                            🗺️ Map Scan
+                        </button>
+                    </div>
+
+                    <!-- Upload Tab -->
+                    <div class="tab-content active" id="content-upload">
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-zone-inner">
+                                <div class="upload-icon" id="upload-icon">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </div>
+                                <p class="upload-text">Drag & drop satellite image here</p>
+                                <p class="upload-hint">or click to browse · JPG, PNG up to 10 MB</p>
+                                <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
+                            </div>
+                        </div>
+                        <div class="upload-preview hidden" id="upload-preview">
+                            <img src="" alt="Uploaded satellite image preview" id="preview-img" />
+                            <button class="btn btn-sm btn-ghost" id="clear-upload">✕ Clear</button>
+                        </div>
+                        <button class="btn btn-primary btn-full" id="btn-predict" disabled>
+                            <span class="btn-icon">🛰️</span> Analyze Image
+                        </button>
+                    </div>
+
+                    <!-- Random Tab -->
+                    <div class="tab-content" id="content-random">
+                        <div class="random-info">
+                            <p>Pull a random satellite image from the training dataset and run real-time inference.</p>
+                        </div>
+                        <button class="btn btn-primary btn-full" id="btn-random">
+                            <span class="btn-icon">🎲</span> Analyze Random Sample
+                        </button>
+                    </div>
+
+                    <!-- Map Tab -->
+                    <div class="tab-content" id="content-map">
+                        <div class="random-info">
+                            <p>Click anywhere on the map (e.g. India) to fetch real-time satellite imagery for that coordinate and scan it for deforestation.</p>
+                        </div>
+                        <div id="sat-map" style="height: 300px; width: 100%; border-radius: 8px; border: 1px solid var(--clr-surface-border); z-index: 1;"></div>
+                    </div>
+                </div>
+
+                <!-- Right: Results -->
+                <div class="predict-result-panel glass-card" id="result-panel">
+                    <div class="result-placeholder" id="result-placeholder">
+                        <div class="placeholder-icon">🛰️</div>
+                        <p>Waiting for satellite imagery…</p>
+                        <p class="placeholder-hint">Upload an image or test a random sample to begin analysis</p>
+                    </div>
+
+                    <div class="result-content hidden" id="result-content">
+                        <!-- Result image -->
+                        <div class="result-image-wrap">
+                            <img src="" alt="Analyzed satellite image" id="result-image" />
+                            <div class="result-label-badge" id="result-label-badge">—</div>
+                        </div>
+
+                        <!-- Confidence Gauge -->
+                        <div class="gauge-section">
+                            <canvas id="confidence-gauge" width="220" height="130"></canvas>
+                            <div class="gauge-label" id="gauge-label">—</div>
+                        </div>
+
+                        <!-- Meta info -->
+                        <div class="result-meta">
+                            <div class="meta-item">
+                                <span class="meta-key">Classification</span>
+                                <span class="meta-value" id="meta-label">—</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-key">Confidence</span>
+                                <span class="meta-value" id="meta-confidence">—</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-key">Raw Score</span>
+                                <span class="meta-value mono" id="meta-raw">—</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-key">Inference Time</span>
+                                <span class="meta-value mono" id="meta-time">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== CNN Architecture Section ====== -->
+        <section id="architecture-section" class="section arch-section">
+            <div class="section-header">
+                <h2 class="section-title">🧠 CNN Architecture</h2>
+                <p class="section-subtitle">Interactive visualization of the model's layer-by-layer structure</p>
+            </div>
+            <div class="arch-container glass-card" id="arch-container">
+                <!-- Populated by JS -->
+            </div>
+            <div class="arch-legend">
+                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-augment)"></span> Augmentation</span>
+                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-conv)"></span> Convolution</span>
+                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-pool)"></span> Pooling</span>
+                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-dense)"></span> Dense / Output</span>
+            </div>
+        </section>
+
+        <!-- ====== History Section ====== -->
+        <section id="history-section" class="section history-section">
+            <div class="section-header">
+                <h2 class="section-title">📋 Prediction Log</h2>
+                <p class="section-subtitle">Recent analysis results from this session</p>
+            </div>
+            <div class="history-list" id="history-list">
+                <div class="history-empty" id="history-empty">
+                    <p>No predictions yet. Run an analysis to populate the log.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== Tech Stack Section ====== -->
+        <section id="tech-section" class="section tech-section">
+            <div class="section-header">
+                <h2 class="section-title">🛠️ Tech Stack</h2>
+                <p class="section-subtitle">Built with modern AI and web technologies</p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-card glass-card">
+                    <div class="tech-icon">🧠</div>
+                    <h3>TensorFlow / Keras</h3>
+                    <p>Custom CNN with data augmentation for satellite texture recognition</p>
+                </div>
+                <div class="tech-card glass-card">
+                    <div class="tech-icon">👁️</div>
+                    <h3>Computer Vision</h3>
+                    <p>OpenCV + PIL for image preprocessing and real-time analysis</p>
+                </div>
+                <div class="tech-card glass-card">
+                    <div class="tech-icon">⚡</div>
+                    <h3>Flask API</h3>
+                    <p>RESTful backend serving model inference with sub-100ms latency</p>
+                </div>
+                <div class="tech-card glass-card">
+                    <div class="tech-icon">📊</div>
+                    <h3>Canvas Viz</h3>
+                    <p>Hardware-accelerated confidence gauges and animated data displays</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ====== Footer ====== -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-brand">🛰️ GreenWatch<span class="nav-accent">.AI</span></p>
+            <p class="footer-copy">Deep Learning Satellite Analysis · Built with TensorFlow &amp; Python</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
