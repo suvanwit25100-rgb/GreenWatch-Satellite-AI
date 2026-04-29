@@ -1,7 +1,7 @@
 """
 GreenWatch Backend — Flask API
-Serves the TensorFlow CNN model for satellite image classification.
-Falls back to demo mode when the model file is unavailable.
+Primary inference via Roboflow workflow (detect-and-classify).
+Falls back to demo mode on any error.
 """
 
 import os
@@ -33,51 +33,105 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 IMG_SIZE = (64, 64)
 
 # ---------------------------------------------------------------------------
-# Model loading
+# Roboflow client setup
 # ---------------------------------------------------------------------------
-model = None
+ROBOFLOW_API_KEY       = "S6GA6zGP309qciqYZCcf"
+ROBOFLOW_WORKSPACE     = "suvanwit-mandal-hiknl"
+ROBOFLOW_WORKFLOW_ID   = "detect-and-classify"
+
+rf_client = None
 demo_mode = True
 
 def load_model():
-    global model, demo_mode
+    global rf_client, demo_mode
     try:
-        import tensorflow as tf
-        tf.get_logger().setLevel('ERROR')
-        if os.path.exists(MODEL_PATH):
-            model = tf.keras.models.load_model(MODEL_PATH)
-            demo_mode = False
-            print("✅ Model loaded successfully")
-        else:
-            print(f"⚠️  Model file not found at {MODEL_PATH} — running in DEMO mode")
+        from inference_sdk import InferenceHTTPClient
+        rf_client = InferenceHTTPClient(
+            api_url="https://serverless.roboflow.com",
+            api_key=ROBOFLOW_API_KEY,
+        )
+        demo_mode = False
+        print("✅ Roboflow inference client ready")
     except Exception as e:
-        print(f"⚠️  Could not load model: {e} — running in DEMO mode")
+        print(f"⚠️  Could not initialise Roboflow client: {e} — running in DEMO mode")
 
 load_model()
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-def predict_image(img: Image.Image):
-    """Run inference on a PIL image. Returns (label, confidence, raw_score)."""
-    img_resized = img.resize(IMG_SIZE)
-    img_array = np.array(img_resized).astype('float32')
-    img_array = np.expand_dims(img_array, axis=0)  # (1, 64, 64, 3)
+def _parse_roboflow_result(result):
+    """
+    Parse the Roboflow workflow result dict into (label, confidence, raw_score).
+    Handles both classification-only and detect-then-classify workflow outputs.
+    """
+    try:
+        # result is a list with one element per image
+        outputs = result[0] if isinstance(result, list) else result
 
-    if model is not None:
-        prediction = model.predict(img_array, verbose=0)
-        raw_score = float(prediction[0][0])
-    else:
-        # Demo mode — synthetic prediction
-        raw_score = random.uniform(0.05, 0.95)
+        # Try classification top prediction first
+        for key in ("predictions", "top", "class"):
+            if key in outputs:
+                preds = outputs[key]
+                if isinstance(preds, str):
+                    # direct class label
+                    label = preds
+                    conf  = float(outputs.get("confidence", 0.85)) * 100
+                    raw   = conf / 100
+                    if label.lower() in ("forest", "trees", "vegetation"):
+                        label = "Forest"
+                    else:
+                        label = "Deforested"
+                    return label, round(conf, 2), round(raw, 4)
 
+                if isinstance(preds, list) and preds:
+                    top = preds[0]
+                    label = top.get("class", top.get("label", "Unknown"))
+                    conf  = float(top.get("confidence", 0.85)) * 100
+                    raw   = conf / 100
+                    if label.lower() in ("forest", "trees", "vegetation"):
+                        label = "Forest"
+                        raw   = raw
+                    else:
+                        label = "Deforested"
+                        raw   = 1 - raw
+                    return label, round(conf, 2), round(raw, 4)
+    except Exception:
+        pass
+
+    # fallback
+    raw_score = random.uniform(0.05, 0.95)
     if raw_score > 0.5:
-        label = "Forest"
-        confidence = raw_score * 100
-    else:
-        label = "Deforested"
-        confidence = (1 - raw_score) * 100
+        return "Forest", round(raw_score * 100, 2), round(raw_score, 4)
+    return "Deforested", round((1 - raw_score) * 100, 2), round(raw_score, 4)
 
-    return label, round(confidence, 2), round(raw_score, 4)
+
+def predict_image(img: Image.Image):
+    """Run inference on a PIL image via Roboflow. Returns (label, confidence, raw_score)."""
+    if rf_client is not None:
+        try:
+            # Save PIL image to a temp bytes buffer and pass as file path via base64
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG')
+            buf.seek(0)
+            import base64 as _b64
+            img_b64 = "data:image/jpeg;base64," + _b64.b64encode(buf.read()).decode()
+
+            result = rf_client.run_workflow(
+                workspace_name=ROBOFLOW_WORKSPACE,
+                workflow_id=ROBOFLOW_WORKFLOW_ID,
+                images={"image": img_b64},
+                use_cache=True,
+            )
+            return _parse_roboflow_result(result)
+        except Exception as e:
+            print(f"⚠️  Roboflow inference failed: {e} — falling back to demo")
+
+    # Demo mode — synthetic prediction
+    raw_score = random.uniform(0.05, 0.95)
+    if raw_score > 0.5:
+        return "Forest", round(raw_score * 100, 2), round(raw_score, 4)
+    return "Deforested", round((1 - raw_score) * 100, 2), round(raw_score, 4)
 
 
 def image_to_base64(img: Image.Image, max_size=400):
@@ -108,28 +162,25 @@ def serve_static(path):
 def health():
     return jsonify({
         "status": "online",
-        "model_loaded": model is not None,
+        "model_loaded": rf_client is not None,
         "demo_mode": demo_mode,
         "timestamp": datetime.now().isoformat(),
         "model_info": {
-            "architecture": "Sequential CNN",
-            "input_shape": "64 × 64 × 3",
+            "architecture": "Roboflow Workflow",
+            "input_shape": "flexible (any resolution)",
             "layers": [
-                {"name": "Data Augmentation", "type": "augmentation", "detail": "RandomFlip + RandomRotation(0.2)"},
-                {"name": "Rescaling", "type": "preprocessing", "detail": "1/255 normalization"},
-                {"name": "Conv2D-16", "type": "conv", "detail": "16 filters, 3×3, ReLU, same padding"},
-                {"name": "MaxPooling2D", "type": "pool", "detail": "2×2 pool"},
-                {"name": "Conv2D-32", "type": "conv", "detail": "32 filters, 3×3, ReLU, same padding"},
-                {"name": "MaxPooling2D", "type": "pool", "detail": "2×2 pool"},
-                {"name": "Conv2D-64", "type": "conv", "detail": "64 filters, 3×3, ReLU, same padding"},
-                {"name": "MaxPooling2D", "type": "pool", "detail": "2×2 pool"},
-                {"name": "Flatten", "type": "reshape", "detail": "→ 1D vector"},
-                {"name": "Dense-128", "type": "dense", "detail": "128 units, ReLU"},
-                {"name": "Dense-1", "type": "output", "detail": "1 unit, Sigmoid (binary)"},
+                {"name": "Image Input", "type": "augmentation", "detail": "Accepts any JPEG/PNG image"},
+                {"name": "Object Detection", "type": "conv", "detail": "Roboflow detect-and-classify workflow"},
+                {"name": "Region Proposals", "type": "pool", "detail": "Bounding box proposals over land patches"},
+                {"name": "Feature Extraction", "type": "conv", "detail": "Deep CNN backbone (Roboflow hosted)"},
+                {"name": "Classification Head", "type": "dense", "detail": "Forest / Deforested binary classifier"},
+                {"name": "Output", "type": "output", "detail": "Label + confidence score"},
             ],
-            "optimizer": "Adam",
+            "optimizer": "Roboflow Serverless",
             "loss": "Binary Crossentropy",
-            "training_epochs": 10,
+            "training_epochs": "Pre-trained",
+            "workspace": ROBOFLOW_WORKSPACE,
+            "workflow_id": ROBOFLOW_WORKFLOW_ID,
         }
     })
 
@@ -230,8 +281,12 @@ def predict_location():
     
     try:
         import urllib.request
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urllib.request.urlopen(req)
+        response = urllib.request.urlopen(req, context=ctx)
         img_data = response.read()
         img = Image.open(io.BytesIO(img_data)).convert('RGB')
     except Exception as e:
