@@ -1,5 +1,6 @@
 # 🛰️ GreenWatch: AI Deforestation Detector
 
+**🟢 Live Dashboard:** [https://greenwatch-satelliteai.onrender.com](https://greenwatch-satelliteai.onrender.com)
 **GreenWatch** is a modern, real-time application that uses computer vision to detect illegal logging and deforestation in satellite imagery. 
 
 Powered by a custom **Trained Brain** (via Roboflow Inference), this tool analyzes satellite photos in real-time to classify land as either **"Forest"** or **"Deforested/Barren"**. It features a premium full-stack web dashboard with interactive Leaflet map scanning, animated confidence gauges, and drag-and-drop image analysis.
@@ -52,7 +53,12 @@ python backend/app.py
 ```
 Open **http://localhost:5001** in your browser.
 
-## 🌍 Live Deployment (Render)
+## 🌍 Live Deployment
+The application is currently live and hosted on Render:
+**👉 [Try GreenWatch AI Live](https://greenwatch-satelliteai.onrender.com)**
+
+*(Note: The Render free tier spins down after inactivity. The first request may take ~30-50 seconds to wake up the server).*
+
 This repository is pre-configured for 1-click deployment on Render.
 1. Create a New Web Service on Render and connect this repository.
 2. Render will automatically detect the settings from `render.yaml`.
