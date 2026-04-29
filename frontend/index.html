@@ -211,20 +211,42 @@
             </div>
         </section>
 
-        <!-- ====== CNN Architecture Section ====== -->
+        <!-- ====== Model Brain Section ====== -->
         <section id="architecture-section" class="section arch-section">
             <div class="section-header">
-                <h2 class="section-title">🧠 CNN Architecture</h2>
-                <p class="section-subtitle">Interactive visualization of the model's layer-by-layer structure</p>
+                <h2 class="section-title">🧠 Model Brain</h2>
+                <p class="section-subtitle">We trained and integrated a custom AI brain for satellite deforestation detection</p>
             </div>
-            <div class="arch-container glass-card" id="arch-container">
-                <!-- Populated by JS -->
-            </div>
-            <div class="arch-legend">
-                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-augment)"></span> Augmentation</span>
-                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-conv)"></span> Convolution</span>
-                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-pool)"></span> Pooling</span>
-                <span class="legend-item"><span class="legend-dot" style="background: var(--clr-dense)"></span> Dense / Output</span>
+            <div class="brain-card glass-card">
+                <div class="brain-hero">
+                    <div class="brain-icon-wrap">🧠</div>
+                    <div class="brain-text">
+                        <h3>Custom-Trained Detection Model</h3>
+                        <p>We trained a dedicated object-detection and classification brain on real satellite imagery. The trained model weights were exported and integrated directly into this project via the <strong>Roboflow inference SDK</strong> — enabling accurate, real-time land-cover classification without any manual feature engineering.</p>
+                    </div>
+                </div>
+                <div class="brain-stats">
+                    <div class="brain-stat">
+                        <span class="brain-stat-icon">🛰️</span>
+                        <span class="brain-stat-label">Training Data</span>
+                        <span class="brain-stat-value">Satellite Imagery</span>
+                    </div>
+                    <div class="brain-stat">
+                        <span class="brain-stat-icon">🎯</span>
+                        <span class="brain-stat-label">Task</span>
+                        <span class="brain-stat-value">Detect &amp; Classify</span>
+                    </div>
+                    <div class="brain-stat">
+                        <span class="brain-stat-icon">⚡</span>
+                        <span class="brain-stat-label">Inference</span>
+                        <span class="brain-stat-value">Roboflow Serverless</span>
+                    </div>
+                    <div class="brain-stat">
+                        <span class="brain-stat-icon">🌿</span>
+                        <span class="brain-stat-label">Output</span>
+                        <span class="brain-stat-value">Forest / Deforested</span>
+                    </div>
+                </div>
             </div>
         </section>
 

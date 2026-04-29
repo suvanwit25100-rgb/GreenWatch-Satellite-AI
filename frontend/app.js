@@ -85,11 +85,6 @@ async function checkHealth() {
         if (data.demo_mode) {
             dom.demoBadge.classList.remove('hidden');
         }
-
-        if (data.model_info) {
-            modelInfo = data.model_info;
-            renderArchitecture(modelInfo);
-        }
     } catch {
         dom.statusText.textContent = 'Offline';
     }
@@ -483,61 +478,6 @@ function addToHistory(data) {
     }
 
     history.push(data);
-}
-
-// ---------------------------------------------------------------------------
-// Architecture Visualizer
-// ---------------------------------------------------------------------------
-function renderArchitecture(info) {
-    if (!info || !info.layers) return;
-
-    const pipeline = document.createElement('div');
-    pipeline.className = 'arch-pipeline';
-
-    info.layers.forEach((layer, i) => {
-        const node = document.createElement('div');
-        node.className = 'arch-layer';
-        node.setAttribute('data-type', layer.type);
-        node.innerHTML = `
-            <div class="arch-layer-name">${layer.name}</div>
-            <div class="arch-layer-detail">${layer.detail}</div>
-        `;
-        pipeline.appendChild(node);
-
-        // Arrow between layers
-        if (i < info.layers.length - 1) {
-            const arrow = document.createElement('div');
-            arrow.className = 'arch-arrow';
-            arrow.innerHTML = '→';
-            pipeline.appendChild(arrow);
-        }
-    });
-
-    dom.archContainer.innerHTML = '';
-    dom.archContainer.appendChild(pipeline);
-
-    // Meta info below
-    const meta = document.createElement('div');
-    meta.style.cssText = 'display:flex; gap:24px; justify-content:center; margin-top:24px; flex-wrap:wrap;';
-    meta.innerHTML = `
-        <div class="meta-item" style="min-width:auto; flex:0;">
-            <span class="meta-key">Optimizer</span>
-            <span class="meta-value mono">${info.optimizer}</span>
-        </div>
-        <div class="meta-item" style="min-width:auto; flex:0;">
-            <span class="meta-key">Loss Function</span>
-            <span class="meta-value mono">${info.loss}</span>
-        </div>
-        <div class="meta-item" style="min-width:auto; flex:0;">
-            <span class="meta-key">Input Shape</span>
-            <span class="meta-value mono">${info.input_shape}</span>
-        </div>
-        <div class="meta-item" style="min-width:auto; flex:0;">
-            <span class="meta-key">Epochs</span>
-            <span class="meta-value mono">${info.training_epochs}</span>
-        </div>
-    `;
-    dom.archContainer.appendChild(meta);
 }
 
 // ---------------------------------------------------------------------------
