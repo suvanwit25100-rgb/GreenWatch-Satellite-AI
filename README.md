@@ -1,45 +1,41 @@
 # 🛰️ GreenWatch: AI Deforestation Detector
 
-**GreenWatch** is a Deep Learning application that uses computer vision to detect illegal logging and deforestation in satellite imagery. 
+**GreenWatch** is a modern, real-time application that uses computer vision to detect illegal logging and deforestation in satellite imagery. 
 
-Built with **TensorFlow (CNN)**, this tool analyzes satellite photos in real-time to classify land as either **"Forest"** or **"Deforested/Barren"**, providing a scalable way to monitor environmental changes. Features a premium fullstack web dashboard with interactive CNN architecture visualization, animated confidence gauges, and drag-and-drop image analysis.
+Powered by a custom **Trained Brain** (via Roboflow Inference), this tool analyzes satellite photos in real-time to classify land as either **"Forest"** or **"Deforested/Barren"**. It features a premium full-stack web dashboard with interactive Leaflet map scanning, animated confidence gauges, and drag-and-drop image analysis.
 
 ## 🚀 Features
-* **Convolutional Neural Network (CNN):** A custom-trained deep learning model optimized for satellite texture recognition.
-* **Data Augmentation:** Implements random flips and rotations during training to make the model robust against different viewing angles.
+* **Trained Brain Model:** A custom-trained computer vision model hosted on Roboflow, optimized for satellite texture recognition.
+* **Interactive Map Scanning:** Click anywhere on the map to fetch real-time satellite imagery via the Esri API and scan it for deforestation instantly.
 * **Premium Web Dashboard:** Dark satellite command center UI with glassmorphism design, real-time analysis, and animated visualizations.
 * **Drag & Drop Upload:** Upload satellite imagery directly from your desktop for instant classification.
 * **Animated Confidence Gauge:** Canvas-rendered arc gauge with smooth animation showing prediction certainty.
-* **CNN Architecture Visualizer:** Interactive layer-by-layer view of the model's structure with color-coded layer types.
 * **Prediction History:** Session log of all analysis results with thumbnails and metadata.
-* **Demo Mode:** Full UI experience even without a trained model — perfect for showcasing.
+* **Demo Mode:** Fallback synthetic predictions so the UI can still be showcased if API connectivity fails.
 * **RESTful API:** Flask backend exposes clean JSON endpoints for model inference.
 
 ## 🛠️ Tech Stack
-* **Deep Learning:** TensorFlow, Keras
-* **Image Processing:** OpenCV, PIL
-* **Backend API:** Flask, Flask-CORS
+* **AI / Computer Vision:** Roboflow Inference SDK (`inference-sdk`)
+* **Image Processing:** Pillow, NumPy
+* **Backend API:** Flask, Flask-CORS, Gunicorn
 * **Frontend:** Vanilla HTML5, CSS3, JavaScript (Canvas API)
-* **Visualization:** Animated gauges, architecture diagrams, counter animations
-* **Language:** Python 3.8+
+* **Maps:** Leaflet.js, Esri World Imagery
+* **Deployment:** Ready for Render (includes `render.yaml`, `Procfile`, and `.python-version`)
 
 ## 📂 Project Structure
 ```text
 GreenWatch-Satellite-AI/
-├── data/                      # Satellite image dataset (Trees vs NoTrees)
-├── models/                    # Saved .h5 trained models
-├── src/
-│   ├── train_cnn.py           # Script to build and train the CNN
-│   ├── predict_forest.py      # CLI script to test single images
-│   ├── check_setup.py         # Verify data pipeline setup
-│   └── dashboard.py           # Legacy Streamlit interface
 ├── backend/
-│   └── app.py                 # Flask API serving the TF model
+│   └── app.py                 # Flask API serving the Roboflow inference client
 ├── frontend/
 │   ├── index.html             # Premium dashboard UI
 │   ├── style.css              # Satellite command center theme
-│   └── app.js                 # Client logic & canvas visualizations
-├── requirements.txt           # Python dependencies
+│   └── app.js                 # Client logic, map initialization & canvas visualizations
+├── requirements.txt           # Lean Python dependencies
+├── Procfile                   # Deployment start command
+├── render.yaml                # Render Blueprint configuration
+├── runtime.txt                # Python version for Render
+├── .python-version            # Python version pin (3.11.0)
 └── README.md
 ```
 
@@ -50,35 +46,26 @@ GreenWatch-Satellite-AI/
 pip install -r requirements.txt
 ```
 
-### 2. Prepare Data (Optional)
-Place satellite images under:
-```
-data/Trees/       # Forest images
-data/NoTrees/     # Deforested / barren images
-```
-
-### 3. Train the Model (Optional)
-```bash
-cd src
-python train_cnn.py
-```
-Training takes ~2-5 mins and saves the model to `models/greenwatch_model.h5`.
-
-### 4. Launch the Dashboard
+### 2. Launch the Dashboard
 ```bash
 python backend/app.py
 ```
-Open **http://localhost:5000** in your browser.
+Open **http://localhost:5001** in your browser.
 
-> **Note:** The dashboard works in **Demo Mode** even without training data or a saved model — it simulates predictions so you can explore the full interface.
+## 🌍 Live Deployment (Render)
+This repository is pre-configured for 1-click deployment on Render.
+1. Create a New Web Service on Render and connect this repository.
+2. Render will automatically detect the settings from `render.yaml`.
+3. The app is served via `gunicorn` on port `$PORT`.
 
 ## 🖥️ API Endpoints
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/health` | GET | System status + model architecture info |
+| `/api/health` | GET | System status + trained brain workflow info |
 | `/api/predict` | POST | Upload image for classification |
-| `/api/random-sample` | GET | Classify a random image from the dataset |
+| `/api/random-sample` | GET | Classify a random demo image |
+| `/api/predict-location` | GET | Fetch and classify satellite imagery for given `lat` and `lng` |
 | `/api/stats` | GET | Dashboard analytics data |
 
 ## 📸 Screenshots
