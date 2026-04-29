@@ -85,6 +85,10 @@ async function checkHealth() {
         if (data.demo_mode) {
             dom.demoBadge.classList.remove('hidden');
         }
+
+        if (data.model_info) {
+            modelInfo = data.model_info;
+        }
     } catch {
         dom.statusText.textContent = 'Offline';
     }
@@ -479,6 +483,8 @@ function addToHistory(data) {
 
     history.push(data);
 }
+
+
 
 // ---------------------------------------------------------------------------
 // Hero Particles
